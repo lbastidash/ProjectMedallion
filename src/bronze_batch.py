@@ -1,5 +1,4 @@
 # src/bronze_batch.py
-# src/bronze_batch.py
 
 import os
 import pandas as pd
