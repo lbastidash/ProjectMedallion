@@ -7,23 +7,37 @@ El objetivo es procesar datos crudos provenientes de archivos CSV, limpiarlos, e
 ---
 
 ## Estructura del repositorio
+```
 ProjectMedallion/
-├─ data/
-│ ├─ landing/
-│ ├─ bronze/
-│ ├─ silver/
-│ └─ gold/
-├─ outputs/
-│ └─ figures/
-├─ src/
-│ ├─ simulate_ingest.py
-│ ├─ bronze_batch.py
-│ ├─ silver_batch.py
-│ ├─ gold_batch.py
-│ └─ report.py
-├─ requirements.txt
-└─ README.md
-
+├── data/
+│   ├── landing/
+│   │   ├── credit_events/
+│   │   └── region_reference/
+│   ├── bronze/
+│   │   ├── credit_events/
+│   │   └── region_reference/
+│   ├── silver/
+│   │   ├── credit_events/
+│   │   └── region_reference/
+│   └── gold/
+│       └── marts/
+│           ├── loan_cohort_metrics/
+│           └── loan_current_state/
+│
+├── outputs/
+│   ├── figures/
+│   └── report.md
+│
+├── src/
+│   ├── simulate_ingest.py
+│   ├── bronze_batch.py
+│   ├── silver_batch.py
+│   ├── gold_batch.py
+│   └── report.py
+│
+├── requirements.txt
+└── README.md
+```
 ### 1. Simulación de ingesta (Landing → Bronze)
 
 Simula la llegada de datos en micro-batches a la carpeta landing.
