@@ -1,84 +1,51 @@
 # src/bronze_batch.py
 # src/bronze_batch.py
 
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import (
-    current_timestamp,
-    input_file_name,
-    lit,
-    to_date
-)
+import os
+import pandas as pd
+from datetime import datetime
 
-def ingest_to_bronze(
-    spark,
-    source_name,
-    ingest_type,
-    landing_path,
-    bronze_path
-):
-    """
-    Generic Bronze ingestion:
-    - Reads CSV as-is (no enforced schema)
-    - Appends metadata columns
-    - Writes append-only Parquet
-    """
+BASE_LANDING = "data/landing"
+BASE_BRONZE = "data/bronze"
 
-    df = (
-        spark.read
-        .option("header", "true")
-        .option("inferSchema", "true")
-        .csv(landing_path)
-    )
+def ingest_to_bronze(source_name, ingest_type):
+    landing_path = os.path.join(BASE_LANDING, source_name)
+    bronze_path = os.path.join(BASE_BRONZE, source_name)
 
-    if df.rdd.isEmpty():
-        print(f"[INFO] No new data for {source_name}")
+    os.makedirs(bronze_path, exist_ok=True)
+
+    files = [f for f in os.listdir(landing_path) if f.endswith(".csv")]
+
+    if not files:
+        print(f"[INFO] No files found for {source_name}")
         return
 
-    df_bronze = (
-        df
-        .withColumn("ingest_timestamp", current_timestamp())
-        .withColumn("ingest_date", to_date("ingest_timestamp"))
-        .withColumn("source_system", lit(source_name))
-        .withColumn("ingest_type", lit(ingest_type))
-        .withColumn("source_file", input_file_name())
-    )
+    dfs = []
+    for f in files:
+        df = pd.read_csv(os.path.join(landing_path, f))
+        df["ingest_timestamp"] = datetime.utcnow()
+        df["ingest_date"] = df["ingest_timestamp"].dt.date
+        df["source_system"] = source_name
+        df["ingest_type"] = ingest_type
+        df["source_file"] = f
+        dfs.append(df)
 
-    (
-        df_bronze.write
-        .mode("append")
-        .partitionBy("ingest_date")
-        .parquet(bronze_path)
-    )
+    final_df = pd.concat(dfs, ignore_index=True)
 
-    print(f"[OK] Bronze ingestion completed for {source_name}")
+    partition_dir = os.path.join(
+        bronze_path,
+        f"ingest_date={final_df['ingest_date'].iloc[0]}"
+    )
+    os.makedirs(partition_dir, exist_ok=True)
+
+    out_file = os.path.join(partition_dir, "data.parquet")
+    final_df.to_parquet(out_file, index=False)
+
+    print(f"[OK] Bronze written for {source_name}")
 
 def main():
-    spark = (
-        SparkSession.builder
-        .appName("bronze_batch_ingestion")
-        .master("local[*]")
-        .getOrCreate()
-    )
-
-    # -------- CREDIT EVENTS (FACT) --------
-    ingest_to_bronze(
-        spark=spark,
-        source_name="credit_events",
-        ingest_type="FACT",
-        landing_path="data/landing/credit_events",
-        bronze_path="data/bronze/credit_events"
-    )
-
-    # -------- REGION REFERENCE (DIMENSION) --------
-    ingest_to_bronze(
-        spark=spark,
-        source_name="region_reference",
-        ingest_type="DIMENSION",
-        landing_path="data/landing/region_reference",
-        bronze_path="data/bronze/region_reference"
-    )
-
-    spark.stop()
+    ingest_to_bronze("credit_events", "FACT")
+    ingest_to_bronze("region_reference", "DIMENSION")
 
 if __name__ == "__main__":
     main()

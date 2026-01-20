@@ -3,19 +3,19 @@
 Simula llegada incremental de datos escribiendo micro-batches CSV.
 Cada archivo representa un micro-batch realista.
 
-Uso: python src/simulate_ingest.py \
-  --input data/raw_zip/credit_events.csv \
-  --out data/landing/credit_events \
-  --batch-size 500 \
-  --rate 1 \
+Uso: python src/simulate_ingest.py 
+  --input data/raw_zip/credit_events.csv 
+  --out data/landing/credit_events 
+  --batch-size 500 
+  --rate 1 
   --source-name credit_events
 
   
-Uso: python src/simulate_ingest.py \
-  --input data/raw_zip/region_reference.csv \
-  --out data/landing/region_reference \
-  --batch-size 1000 \
-  --rate 0 \
+Uso: python src/simulate_ingest.py 
+  --input data/raw_zip/region_reference.csv 
+  --out data/landing/region_reference 
+  --batch-size 10 
+  --rate 1 
   --source-name region_reference
 
 """
@@ -44,6 +44,7 @@ def simulate_micro_batches(
         batch_df = df.iloc[start:end]
 
         ts = pd.Timestamp.utcnow().strftime("%Y%m%dT%H%M%S")
+        
         filename = f"{source_name}_batch_{batch_id}_{ts}.csv"
         path = os.path.join(out_dir, filename)
 
