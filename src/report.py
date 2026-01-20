@@ -99,24 +99,28 @@ def main():
     }
 
     # -------------------------
-    # Plot 1: Data quality
+    # Plot 1: Calidad de datos (mejorada)
     # -------------------------
-    plt.figure()
+    plt.figure(figsize=(6, 4))
     plt.bar(
-        ["Valid", "Quarantine", "Duplicates"],
+        ["Válidos", "Cuarentena", "Duplicados"],
         [
             silver_count - duplicate_count,
             quarantine_count,
             duplicate_count,
         ],
     )
-    plt.title("Data Quality Summary")
-    plt.ylabel("Records")
-    plt.savefig(FIG / "data_quality.png")
+
+    plt.title("Resumen de Calidad de Datos")
+    plt.ylabel("Cantidad de registros")
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(FIG / "calidad_datos.png")
     plt.close()
 
-    # -------------------------
-    # Plot 2: Business metric
+
+        # -------------------------
+    # Plot 2: Métrica de negocio (mejorada)
     # -------------------------
     cohort_plot = (
         cohort.groupby("cohort_month", as_index=False)
@@ -124,54 +128,77 @@ def main():
         .sort_values("cohort_month")
     )
 
-    plt.figure()
+    plt.figure(figsize=(10, 5))  # ← más ancho
     plt.plot(
         cohort_plot["cohort_month"],
         cohort_plot["balance_at_risk"],
         marker="o",
     )
-    plt.title("Balance at Risk by Cohort")
-    plt.xlabel("Cohort Month")
-    plt.ylabel("Balance at Risk")
-    plt.xticks(rotation=45)
+
+    plt.title("Saldo en Riesgo por Mes de Cohorte")
+    plt.xlabel("Mes de cohorte")
+    plt.ylabel("Saldo en riesgo")
+
+    # Mostrar solo algunas etiquetas del eje X
+    step = max(len(cohort_plot) // 10, 1)
+    plt.xticks(
+        cohort_plot["cohort_month"][::step],
+        rotation=45,
+        ha="right",
+    )
+
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(FIG / "balance_at_risk_by_cohort.png")
+    plt.savefig(FIG / "saldo_en_riesgo_por_cohorte.png")
     plt.close()
 
     # -------------------------
     # Markdown Report
     # -------------------------
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
-        f.write(f"# 📊 Data Pipeline Report\n\n")
-        f.write(f"**Execution time:** {now}\n\n")
+        f.write("# 📊 Reporte del Pipeline de Datos\n\n")
+        f.write(f"**Fecha y hora de ejecución:** {now}\n\n")
 
-        f.write("## 1️⃣ Execution Summary\n")
-        f.write(f"- Bronze path: `{BRONZE}`\n")
-        f.write(f"- Silver path: `{SILVER}`\n")
-        f.write(f"- Gold path: `{GOLD}`\n")
-        f.write(f"- Micro-batches processed: **{micro_batches}**\n\n")
+        f.write("## 1️⃣ Resumen de Ejecución\n")
+        f.write(
+            "Este reporte presenta un resumen del estado final del pipeline "
+            "implementado bajo una arquitectura Medallion (Bronze, Silver, Gold).\n\n"
+        )
+        f.write("**Parámetros de ejecución:**\n")
+        f.write(f"- Ruta Bronze: `{BRONZE}`\n")
+        f.write(f"- Ruta Silver: `{SILVER}`\n")
+        f.write(f"- Ruta Gold: `{GOLD}`\n")
+        f.write(f"- Micro-batches procesados en Bronze: **{micro_batches}**\n\n")
 
-        f.write("## 2️⃣ Records by Medallion Layer\n")
-        f.write(f"- Bronze records: **{bronze_count}**\n")
-        f.write(f"- Silver valid records: **{silver_count}**\n")
-        f.write(f"- Silver quarantine records: **{quarantine_count}**\n")
-        f.write(f"- Gold records: **{gold_count}**\n\n")
+        f.write("## 2️⃣ Métricas por Capa (Medallion)\n")
+        f.write(f"- Registros en Bronze: **{bronze_count}**\n")
+        f.write(f"- Registros válidos en Silver: **{silver_count}**\n")
+        f.write(f"- Registros enviados a cuarentena (Silver): **{quarantine_count}**\n")
+        f.write(f"- Registros finales en Gold: **{gold_count}**\n\n")
 
-        f.write("## 3️⃣ Data Quality\n")
-        f.write(f"- Duplicate events detected: **{duplicate_count}**\n")
-        f.write(f"- Invalid DPD records: **{rule_invalid_dpd}**\n")
-        f.write(f"- Invalid balance records: **{rule_invalid_balance}**\n")
-        f.write(f"- Invalid interest rate records: **{rule_invalid_interest}**\n\n")
+        f.write("## 3️⃣ Calidad de Datos\n")
+        f.write("### Reglas de validación aplicadas\n")
+        f.write(f"- Registros duplicados detectados: **{duplicate_count}**\n")
+        f.write(f"- Registros con días de mora inválidos: **{rule_invalid_dpd}**\n")
+        f.write(f"- Registros con saldo inválido: **{rule_invalid_balance}**\n")
+        f.write(f"- Registros con tasa de interés inválida: **{rule_invalid_interest}**\n\n")
 
-        f.write("### Null percentage (critical fields)\n")
+        f.write("### Porcentaje de valores nulos en campos críticos\n")
         for k, v in nulls.items():
             f.write(f"- {k}: **{v}%**\n")
 
-        f.write("\n## 4️⃣ Visualizations\n")
-        f.write("### Data Quality Overview\n")
-        f.write("![](figures/data_quality.png)\n\n")
-        f.write("### Balance at Risk by Cohort\n")
-        f.write("![](figures/balance_at_risk_by_cohort.png)\n")
+        f.write("\n## 4️⃣ Visualizaciones\n")
+        f.write(
+            "Las siguientes visualizaciones permiten evaluar rápidamente "
+            "la calidad del pipeline y el valor analítico de la capa Gold.\n\n"
+        )
+
+        f.write("### Resumen de calidad de datos\n")
+        f.write("![](figures/calidad_datos.png)\n\n")
+
+        f.write("### Saldo en riesgo por mes de cohorte\n")
+        f.write("![](figures/saldo_en_riesgo_por_cohorte.png)\n")
+
 
     print(f"✔ Report generated at {REPORT_PATH}")
 
